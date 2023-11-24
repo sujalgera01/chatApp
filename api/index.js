@@ -11,6 +11,8 @@ const jwtSecret = process.env.JWT_SECRET;
 
 
 const app = express();
+app.use(express.json());
+
 app.use(cors({
     credentials: true,
     origin: process.env.CLIENT_URL
@@ -20,13 +22,36 @@ app.get('/test', (req,res)=>{
     res.json('test ok')
 });
 
+app.get('/profile',(req,res)=> {
+    const token = req.cookies?.token;
+    if(token){
+        jwt.verify(token, jwtSecret,{},(err,userData)=>{
+            if(err) throw err;
+            res.json(userData);
+        })
+    }
+    else{
+
+    }
+    
+})
+
 app.post('/register', async (req,res)=>{
     const {username, password} = req.body;
-    const createdUser = await User.create({username,password});
-    jwt.sign({userId: createdUser._id}, jwtSecret, {}, (err,token)=>{
-        if(err) throw err;
-        res.cookie('token', token).status(201).json('ok');
-    })
+    try{
+        const createdUser = await User.create({username,password});
+        jwt.sign({userId: createdUser._id}, jwtSecret, {}, (err,token)=>{
+            if(err) throw err;
+            res.cookie('token', token).status(201).json({
+                id: createdUser._id,
+                username
+            });
+        })
+    }
+    catch (err){
+        console.error('registration failed', err.message);
+        res.status(500).json('registration failed');
+    }
 })
 
 app.listen(4040);
